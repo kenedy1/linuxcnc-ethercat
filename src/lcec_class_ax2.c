@@ -86,8 +86,8 @@ int lcec_class_ax2_init(struct lcec_slave *slave, ec_pdo_entry_reg_t *pdo_entry_
   int err;
   uint8_t idn_buf[4];
   uint32_t idn_pos_resolution = 20;
-  uint16_t idn_vel_scale = 50;
-  int16_t idn_vel_exp = 10;
+  uint16_t idn_vel_scale = 5000;
+  int16_t idn_vel_exp = 100;
   char enc_pfx[HAL_NAME_LEN];
 
   // initialize POD entries
@@ -131,6 +131,13 @@ SM3: PhysAddr 0x1140, DefaultSize    0, ControlRegister 0x22, Enable 1
     return err;
   }
   
+
+  // set to cyclic synchronous velocity mode
+  if (ecrt_slave_config_sdo8(slave->config, 0x6060, 0x00, (uint8_t)0x09 ) != 0)
+  {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo velo mode\n", master->name, slave->name);
+  }
+
   // initialie encoder
   rtapi_snprintf(enc_pfx, HAL_NAME_LEN, "%senc", pfx);
   if ((err = class_enc_init(slave, &chan->enc, 32, enc_pfx)) != 0) {
@@ -214,18 +221,18 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
   
   // check fault
   *(chan->fault) = 0;
-  // check error shut off status
-  if (((*(chan->status) >> 13) & 1) != 0) {
-    *(chan->fault) = 1;
+  // check error ETERCAT OK
+  if (((*(chan->status) >> 12) & 1) != 1) {
+   *(chan->fault) = 1;
   }
-  // check ready-to-operate value
-  if (((*(chan->status) >> 14) & 3) == 0) {
-    *(chan->fault) = 1;
+  // check hardware error
+  if (((*(chan->status) >> 14) & 3) != 0) {
+   // *(chan->fault) = 1;
   }
 
   // check status
-  *(chan->enabled) = (((*(chan->status) >> 14) & 3) == 3);
-  *(chan->halted) = (((*(chan->status) >> 3) & 1) != 1);
+  *(chan->enabled) = (((*(chan->status) >> 1) & 2) == 1);
+  *(chan->halted) = (((*(chan->status) >> 6) & 1) == 1);
 
 
   // update position feedback
@@ -237,12 +244,12 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
   class_enc_update(&chan->enc_fb2, 1, chan->scale_fb2_rcpt, pos_cnt, 0, 0);
   
   
-  *(chan->follerr_fb) = ((double) EC_READ_U32(&pd[chan->follerr_pdo_os])) * 0.1;
+  *(chan->follerr_fb) = ((double) EC_READ_S32(&pd[chan->follerr_pdo_os])) / 5000;
 
   pos_cnt = EC_READ_U32(&pd[chan->latchpos_pdo_os]);
   *(chan->latch_pos) = pos_cnt;
 
-  *(chan->torq_fb) = ((double) EC_READ_U16(&pd[chan->torque_fb_pdo_os])) * 0.1;
+  *(chan->torq_fb) = ((double) EC_READ_S16(&pd[chan->torque_fb_pdo_os])) * 10;
 }
 
 void lcec_class_ax2_write(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) {
@@ -253,16 +260,16 @@ void lcec_class_ax2_write(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan)
 
   // write outputs
   ctrl = 0;
-  if (chan->toggle) {
-    ctrl |= (1 << 10); // sync
-  }
+  if  (slave->state.operational)  ctrl |= (1 << 1);
+
+
   if (*(chan->enable)) {
     if (!(*(chan->halt))) {
-      ctrl |= (1 << 13); // halt/restart
+      ctrl |= (1 << 0); // halt/restart
     }
-    ctrl |= (1 << 14); // enable
+    ctrl |= (1 << 2); // enable
     if (!(*(chan->drive_off))) {
-      ctrl |= (1 << 15); // drive on
+      ctrl |= (1 << 3); // drive on
     }
   }
   EC_WRITE_U16(&pd[chan->ctrl_pdo_os], ctrl);
