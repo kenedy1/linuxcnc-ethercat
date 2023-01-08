@@ -3,6 +3,9 @@
         "lcec.h": "c",
         "hal.h": "c",
         "ecrt.h": "c",
-        "optional": "c"
+        "optional": "c",
+        "lcec_deasda.h": "c",
+        "lcec_class_enc.h": "c",
+        "lcec_class_ax2.h": "c"
     }
 }

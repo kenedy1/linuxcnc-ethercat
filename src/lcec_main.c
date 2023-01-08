@@ -55,7 +55,7 @@
 #include "lcec_dems300.h"
 #include "lcec_omrg5.h"
 #include "lcec_ph3lm2rm.h"
-#include "lcec_ax20.h"
+#include "lcec_ax2000.h"
 
 #include "rtapi_app.h"
 
@@ -260,7 +260,7 @@ static const lcec_typelist_t types[] = {
 
   // modusoft PH3LM2RM converter
   { lcecSlaveTypePh3LM2RM, LCEC_PH3LM2RM_VID, LCEC_PH3LM2RM_PID, LCEC_PH3LM2RM_PDOS, 0, NULL, lcec_ph3lm2rm_init},
-  { lcecSlaveTypeAX20 , LCEC_BECKHOFF_VID, LCEC_AX20_PID, LCEC_AX20_PDOS,0,NULL, lcec_ax20_init},
+  { lcecSlaveTypeAX2000 , LCEC_BECKHOFF_VID, LCEC_AX2006_PID, LCEC_AX2006_PDOS,0,NULL, lcec_ax2000_init},
   { lcecSlaveTypeInvalid }
 };
 

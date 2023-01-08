@@ -3,10 +3,11 @@ lcec-objs := \
     lcec_main.o \
     lcec_class_enc.o \
     lcec_class_ax5.o \
+    lcec_class_ax2.o \
     lcec_generic.o \
     lcec_ax5100.o \
     lcec_ax5200.o \
-    lcec_ax20.o \
+    lcec_ax2000.o \
     lcec_el1xxx.o \
     lcec_el1252.o \
     lcec_el1859.o \

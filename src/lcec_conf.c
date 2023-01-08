@@ -37,7 +37,8 @@
 #include "lcec_el70x1.h"
 #include "lcec_el7411.h"
 #include "lcec_class_ax5.h"
-#include "lcec_ax20.h"
+
+#include "lcec_class_ax2.h"
 
 typedef enum {
   MODPARAM_TYPE_BIT,
@@ -313,7 +314,7 @@ static const LCEC_CONF_TYPELIST_T slaveTypes[] = {
   // modusoft PH3LM2RM converter
   { "Ph3LM2RM", lcecSlaveTypePh3LM2RM, NULL },
   // Beckhoff AX2006 driver
-  {"ax20", lcecSlaveTypeAX20, NULL},
+  {"ax2000", lcecSlaveTypeAX2000, NULL},
 
   { NULL }
 };

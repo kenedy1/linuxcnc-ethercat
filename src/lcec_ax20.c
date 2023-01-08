@@ -19,15 +19,17 @@
 #include "lcec.h"
 #include "lcec_ax20.h"
 
+#include "lcec_class_enc.h"
+
 #define ax20_RPS_FACTOR (4294967296.0 / (128.0 * 4000.0))
 
 typedef struct
 {
-  int do_init;
+  
 
   // Digital inputs bits
-  hal_bit_t *Hdin[4];
-  hal_bit_t *Hdin_not[4];
+  // hal_bit_t *Hdin[4];
+  // hal_bit_t *Hdin_not[4];
 
   // Control word bits
   hal_bit_t *enable;
@@ -57,100 +59,217 @@ typedef struct
   hal_bit_t *homing_error;
   hal_bit_t *motion_task_active;
 
+  hal_bit_t *Hpos_fb_index_enable;
+  hal_bit_t *Hpos_extenc_index_enable;
+  hal_bit_t *Hpos_latch;
+
+
+  hal_float_t *Hpos_fb_raw;
+  hal_float_t *Hpos_fb;
+   
+  hal_float_t *Hpos_fb_index_delta;
+
+  hal_float_t *Hpos_folloving_err;
+
+  hal_float_t *Hpos_extenc_raw;
+  hal_float_t *Hpos_extenc;
+  hal_float_t *Hpos_extenc_index_delta;
+
+  hal_float_t *Hpos_latched;
+
+
+  hal_float_t *Hvel_fb;
+
+  hal_float_t *Hvel_extenc;
+
+  hal_float_t *Hcur_fb;
+  
+
+  
+
+  
   hal_float_t *Hcur_cmd;
   hal_float_t *Hvel_cmd;
-  hal_float_t *Htrq_cmd;
   hal_float_t *Hmtrq_cmd;
   hal_float_t *Hpos_cmd;
+
+  hal_u32_t *Hpos_fb_cnt_raw_hi;
+  hal_u32_t *Hpos_fb_cnt_raw_lo;
+  hal_s32_t *Hpos_fb_index_delta_count;
+
+  hal_u32_t *Hpos_extenc_cnt_raw_hi;
+  hal_u32_t *Hpos_extenc_cnt_raw_lo;
+  hal_s32_t *Hpos_extenc_index_delta_count;
+
+
+  hal_s32_t *Hpos_latched_count;
+
+
+  hal_s32_t *Hpos_cmd_pdo_val;
+  hal_s32_t *Hvel_cmd_pdo_val;
+  hal_s32_t *trq_cmd_pdo_val;
+  hal_s32_t *mtrq_cmd_pdo_val;
+
+
+
 
 
   int pos_fb_srv_cnt_last;
   long long pos_fb_index_cnt;
   long long pos_fb_cnt_last;
   long long pos_fb_cnt;
-  hal_u32_t *Hpos_fb_cnt_raw_hi;
-  hal_u32_t *Hpos_fb_cnt_raw_lo;
+
+  
+
   hal_s32_t pos_fb_home_raw;
-  hal_float_t *Hpos_fb_raw;
-  hal_float_t *Hpos_fb;
   hal_float_t Ppos_fb_scale;
   hal_float_t pos_fb_scale_old;
 
-  hal_s32_t *Hpos_fb_index_delta_count;
-  hal_float_t *Hpos_fb_index_delta;
-
-  hal_float_t *Hpos_folloving_err;
-
-  hal_float_t *Hvel_fb;
+ 
 
   int pos_extenc_srv_cnt_last;
   long long pos_extenc_index_cnt;
   long long pos_extenc_cnt_last;
   long long pos_extenc_cnt;
-  hal_u32_t *Hpos_extenc_cnt_raw_hi;
-  hal_u32_t *Hpos_extenc_cnt_raw_lo;
+
   hal_s32_t pos_extenc_home_raw;
-  hal_float_t *Hpos_extenc_raw;
-  hal_float_t *Hpos_extenc;
+ 
   hal_float_t Ppos_extenc_scale;
   hal_float_t pos_extenc_scale_old;
 
-  hal_s32_t *Hpos_extenc_index_delta_count;
-  hal_float_t *Hpos_extenc_index_delta;
-
-  hal_float_t *Hvel_extenc;
-
-  hal_s32_t *Hpos_latched_count;
-  hal_float_t *Hpos_latched;
-
-  hal_float_t *Hcur_fb;
-
-  unsigned int pos_pdo_os;
-  unsigned int pos2_pdo_os;
-  unsigned int tork_pdo_os;
-  unsigned int follerr_pdo_os;
-  unsigned int status_pdo_os;
-  unsigned int latchstatus_pdo_os;
-  unsigned int latchpos_pdo_os;
-
-  unsigned int pos_cmd_pdo_os;
-  unsigned int vel_cmd_pdo_os;
-  unsigned int trq_cmd_pdo_os;
-  unsigned int mtrq_cmd_pdo_os;
-  unsigned int control_cmd_pdo_os;
-  unsigned int latchcontrol_cmd_pdo_os;
+//PDOS  1B07  fb
+  unsigned int pos_pdo_os;  //32
+  unsigned int pos2_pdo_os; //32
+  unsigned int tork_pdo_os; //16
+  unsigned int follerr_pdo_os; //32
+  unsigned int status_pdo_os; //16
+  unsigned int latchstatus_pdo_os; //16
+  unsigned int latchpos_pdo_os;  //32  22 B total
+//  pdos 1707 cnd 
+  unsigned int pos_cmd_pdo_os;  //32
+  unsigned int vel_cmd_pdo_os; //32
+  unsigned int trq_cmd_pdo_os; //16
+  unsigned int mtrq_cmd_pdo_os; //16
+  unsigned int control_cmd_pdo_os; //16
+  unsigned int latchcontrol_cmd_pdo_os; //16   16 B total
 
   hal_u32_t Pstatus_val;
+
+/*
   hal_u32_t Platch_status_val;
   hal_u32_t latch_status_val_last;
-
-  hal_s32_t *Hpos_cmd_pdo_val;
-  hal_s32_t *Hvel_cmd_pdo_val;
-  hal_s32_t *trq_cmd_pdo_val;
-  hal_s32_t *mtrq_cmd_pdo_val;
-  hal_u32_t control_cmd_val;
   hal_u32_t Platch_control_val;
   hal_u32_t latch_control_val_last;
 
-  hal_bit_t *Hpos_latch;
+ 
   hal_bit_t pos_latch_last;
+*/
+
+  hal_u32_t Pcontrol_cmd_val;
+ 
 
   double prbase_val;
   int prbase_mask;
-
-  int drv_peak_current;
-
-  hal_bit_t *Hpos_fb_index_enable;
-  hal_bit_t *Hpos_extenc_index_enable;
+  hal_u32_t drv_peak_current;
+  //int do_init;
+  //lcec_class_enc_data_t enc;
+  //lcec_class_enc_data_t extenc;
 
 } lcec_ax20_data_t;
+
+static const lcec_pindesc_t slave_pins[] = {
+ 
+  //control word
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, enable), "%s.%s.%s.srv_enable" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, inhibit), "%s.%s.%s.srv_inhibit" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, ctrl_bit2), "%s.%s.%s.srv_ctrl_bit2" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, setpoint_enable), "%s.%s.%s.srv_setpoint_enable" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, clr_fault), "%s.%s.%s.srv_clr_fault" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, homing_start), "%s.%s.%s.srv_homing_start" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_ax20_data_t, save), "%s.%s.%s.srv_save" },
+  //status word
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, switch_on_not_ready), "%s.%s.%s.srv_switch_on_not_ready" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, switch_on_disabled), "%s.%s.%s.srv_switch_on_disabled" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, switch_on_ready), "%s.%s.%s.srv_switch_on_ready" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, switched_on), "%s.%s.%s.srv_switched_on" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, enabled), "%s.%s.%s.srv_enabled" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, fault), "%s.%s.%s.srv_fault" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, fault_react_active), "%s.%s.%s.srv_fault_react_active" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, quick_stop_active), "%s.%s.%s.srv_quick_stop_active" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, warning), "%s.%s.%s.srv_warning" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, followinq_err), "%s.%s.%s.srv_followinq_err" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, ref_point_set), "%s.%s.%s.srv_ref_point_set" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, in_pos), "%s.%s.%s.srv_in_pos" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, on_lim_switch), "%s.%s.%s.srv_on_lim_switch" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, ethercat_ok), "%s.%s.%s.srv_ethercat_ok" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, homing_error), "%s.%s.%s.srv_homing_error" },
+  { HAL_BIT, HAL_OUT, offsetof(lcec_ax20_data_t, motion_task_active), "%s.%s.%s.srv_motion_task_active" },
+
+  { HAL_BIT, HAL_IO, offsetof(lcec_ax20_data_t, Hpos_fb_index_enable), "%s.%s.%s.srv_pos_fb_index_enable" },
+  { HAL_BIT, HAL_IO, offsetof(lcec_ax20_data_t, Hpos_extenc_index_enable), "%s.%s.%s.srv_pos_extenc_index_enable" },
+  { HAL_BIT, HAL_IO, offsetof(lcec_ax20_data_t, Hpos_latch), "%s.%s.%s.srv_pos_latch" },
+
+
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb_raw), "%s.%s.%s.srv_pos_fb_raw" },
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb), "%s.%s.%s.srv_pos_fb" },
+
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb_index_delta), "%s.%s.%s.srv_pos_fb_index_delta" },
+
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_folloving_err), "%s.%s.%s.srv_pos_folloving_err" },
+
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_extenc_raw), "%s.%s.%s.srv_pos_extenc_raw" },
+  { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_extenc_index_delta), "%s.%s.%s.srv_pos_extenc_index_delta" },
+
+   { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_latched), "%s.%s.%s.srv_pos_latched" },
+   { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hvel_fb), "%s.%s.%s.srv_vel_fb" },
+
+   { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hvel_extenc), "%s.%s.%s.srv_vel_extenc" },
+
+   { HAL_FLOAT, HAL_OUT, offsetof(lcec_ax20_data_t, Hcur_fb), "%s.%s.%s.srv_cur_fb" },
+
+  // float inputs
+   { HAL_FLOAT, HAL_IN, offsetof(lcec_ax20_data_t, Hcur_cmd), "%s.%s.%s.srv_cur_cmd" },
+   { HAL_FLOAT, HAL_IN, offsetof(lcec_ax20_data_t, Hvel_cmd), "%s.%s.%s.srv_vel_cmd" },
+   { HAL_FLOAT, HAL_IN, offsetof(lcec_ax20_data_t, Hmtrq_cmd), "%s.%s.%s.srv_mtrq_cmd" },
+   { HAL_FLOAT, HAL_IN, offsetof(lcec_ax20_data_t, Hpos_cmd), "%s.%s.%s.srv_pos_cmd" },
+
+
+
+  { HAL_U32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb_cnt_raw_hi), "%s.%s.%s.srv_pos_fb_cnt_raw_hi" },
+  { HAL_U32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb_cnt_raw_lo), "%s.%s.%s.srv_pos_fb_cnt_raw_lo" },
+  { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_fb_index_delta_count), "%s.%s.%s.srv_pos_fb_index_delta_count" },
+
+  { HAL_U32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_extenc_cnt_raw_hi), "%s.%s.%s.srv_pos_extenc_cnt_raw_hi" },
+  { HAL_U32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_extenc_cnt_raw_lo), "%s.%s.%s.srv_pos_extenc_cnt_raw_lo" },
+  { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_extenc_index_delta_count), "%s.%s.%s.srv_pos_extenc_index_delta_count" },
+
+  { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_latched_count), "%s.%s.%s.srv_pos_latched_count" },
+
+   { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, Hpos_cmd_pdo_val), "%s.%s.%s.srv_pos_cmd_pdo_val" },
+   { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, Hvel_cmd_pdo_val), "%s.%s.%s.srv_vel_cmd_pdo_val" },
+   { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, trq_cmd_pdo_val), "%s.%s.%s.srv_trq_cmd_pdo_val" },
+   { HAL_S32, HAL_OUT, offsetof(lcec_ax20_data_t, mtrq_cmd_pdo_val), "%s.%s.%s.srv_mtrq_cmd_pdo_val" },
+
+  { HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL }
+};
+
+
+static const lcec_pindesc_t slave_params[] = {
+  { HAL_FLOAT, HAL_RW, offsetof(lcec_ax20_data_t, Ppos_fb_scale),     "%s.%s.%s.Ppos_fb_scale" },
+  { HAL_FLOAT, HAL_RW, offsetof(lcec_ax20_data_t, Ppos_extenc_scale), "%s.%s.%s.Ppos_extenc_scale" },
+  { HAL_U32, HAL_RO, offsetof(lcec_ax20_data_t,   Pstatus_val),       "%s.%s.%s.srv-Pstatus_val" },
+  //{ HAL_U32, HAL_RO, offsetof(lcec_ax20_data_t,   Platch_status_val), "%s.%s.%s.srv-Platch_status_val" },
+  { HAL_U32, HAL_RO, offsetof(lcec_ax20_data_t,   Pcontrol_cmd_val),  "%s.%s.%s.srv-Pcontrol_cmd_val" },
+ // { HAL_U32, HAL_RO, offsetof(lcec_ax20_data_t,   Platch_control_val),"%s.%s.%s.srv-Platch_control_val" },
+  { HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL }
+};
 
 /*           IN PDOS                      */
 static ec_pdo_entry_info_t lcec_ax20_in[] = {
     {0x6064, 0x00, 32}, // Position actual value
-    {0x35C9, 0x00, 32}, // Position actual value 2
+    {0x35c9, 0x00, 32}, // Position actual value 2
     {0x6077, 0x00, 16}, // Torque actual value
-    {0x60F4, 0x00, 32}, // Following error
+    {0x60f4, 0x00, 32}, // Following error
     {0x6041, 0x00, 16}, // Status word
     {0x2901, 0x00, 16}, // Latch status word
     {0x2902, 0x00, 32}  // Latch position
@@ -212,7 +331,7 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
   rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "starting writing sdos\n");
 
   // set to cyclic synchronous velocity mode
-  if (ecrt_slave_config_sdo8(slave->config, 0x6060, 0x00, 9) != 0)
+  if (ecrt_slave_config_sdo8(slave->config, 0x6060, 0x00, (uint8_t)0x09 ) != 0)
   {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo velo mode\n", master->name, slave->name);
   }
@@ -225,6 +344,8 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
     tu /= 10;
     ti++;
   }
+
+
   if (ecrt_slave_config_sdo8(slave->config, 0x60C2, 0x01, (uint8_t)tu) != 0)
   {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo ipol time period units\n", master->name, slave->name);
@@ -234,6 +355,7 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo ipol time period index\n", master->name, slave->name);
   }
   
+/*
     if (ecrt_slave_config_sdo8(slave->config, 0x1C12, 0x00, 0x00) != 0) {
       rtapi_print_msg (RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo fixed pdo mapping access\n", master->name, slave->name);
     }
@@ -254,7 +376,7 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
     }
 
   rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "writing sdos finished - no sdo\n");
-
+*/
   // read prbase value
   if (lcec_read_sdo(slave, 0x35D1, 0x01, sdo_buf, 4))
   {
@@ -273,8 +395,7 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
 
   slave->sync_info = lcec_ax20_syncs;
 
-  // initialize sync info
-  slave->sync_info = lcec_ax20_syncs;
+
   // initialize POD entries
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6064, 0x00, &hal_data->pos_pdo_os, NULL); //32
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x35C9, 0x00, &hal_data->pos2_pdo_os, NULL); //32
@@ -291,498 +412,95 @@ int lcec_ax20_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pd
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6040, 0x00, &hal_data->control_cmd_pdo_os, NULL); //16
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x2802, 0x00, &hal_data->latchcontrol_cmd_pdo_os, NULL); //16
   
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "PDO init finish\n");
+  
+  // export pins
+  if ((err = lcec_pin_newf_list(hal_data, slave_pins, LCEC_MODULE_NAME, master->name, slave->name)) != 0) {
+    return err;
+  }
+
+  // export parameters
+  if ((err = lcec_param_newf_list(hal_data, slave_params, LCEC_MODULE_NAME, master->name, slave->name)) != 0) {
+    return err;
+  }
   /*
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos_fb-cnt_raw-hi", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_u32_new(name, HAL_OUT, &(hal_data->Hpos_fb_cnt_raw_hi), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
+  // init subclasses
+  if ((err = class_enc_init(slave, &hal_data->enc, 32, "enc")) != 0) {
     return err;
   }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-cnt-raw-lo", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_u32_new(name, HAL_OUT, &(hal_data->Hpos_fb_cnt_raw_lo), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
+  if ((err = class_enc_init(slave, &hal_data->extenc, 32, "extenc")) != 0) {
     return err;
   }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-raw", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_fb_raw), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_fb), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-vel-fb", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hvel_fb), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-scale", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_param_float_new(name, HAL_RW, &(hal_data->Ppos_fb_scale), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-following-err", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_folloving_err), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-cnt-raw-hi", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_u32_new(name, HAL_OUT, &(hal_data->Hpos_extenc_cnt_raw_hi), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-cnt-raw-lo", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_u32_new(name, HAL_OUT, &(hal_data->Hpos_extenc_cnt_raw_lo), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-raw", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_extenc_raw), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_extenc), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-scale", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_param_float_new(name, HAL_RW, &(hal_data->Ppos_extenc_scale), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-vel-extenc", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hvel_extenc), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-cur-fb", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hcur_fb), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-cmd", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_IN, &(hal_data->Hpos_cmd), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-vel-cmd", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_IN, &(hal_data->Hvel_cmd), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-trq-cmd", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_IN, &(hal_data->Htrq_cmd), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-mtrq-cmd", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_IN, &(hal_data->Hmtrq_cmd), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-cur-cmd", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_IN, &(hal_data->Hcur_cmd), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  // Adding Digital inputs bits
-  for (i = 0; i < 4; i++)
-  {
-    rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-Hdin%d", LCEC_MODULE_NAME, master->name, slave->name, i + 1);
-    if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->Hdin[i]), comp_id)) != 0)
-    {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-      return err;
-    }
-    rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-Hdin%d-not", LCEC_MODULE_NAME, master->name, slave->name, i + 1);
-    if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->Hdin_not[i]), comp_id)) != 0)
-    {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-      return err;
-    }
-  }
-
-  // Adding Control word bits
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-enable", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->enable), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-inhibit", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->inhibit), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-ctrl-bit2", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->ctrl_bit2), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-setpoint-enable", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->setpoint_enable), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-clr-fault", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->clr_fault), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-homing-start", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->homing_start), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-save", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IN, &(hal_data->save), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  // Adding Status word bits
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-sw-on-not-ready", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->switch_on_not_ready), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-sw-on-disabled", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->switch_on_disabled), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-sw-on-ready", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->switch_on_ready), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-switched-on", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->switched_on), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-enabled", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->enabled), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-fault", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->fault), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-fault-react-active", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->fault_react_active), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-quick-stop-active", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->quick_stop_active), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-warning", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->warning), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-follwing-err-present", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->followinq_err), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-ref-point-set", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->ref_point_set), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-in-position", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->in_pos), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-on-limit-switch", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->on_lim_switch), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-ethercat-ok", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->ethercat_ok), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-homing-error", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->homing_error), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-motion-task-active", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_OUT, &(hal_data->motion_task_active), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-index-enable", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IO, &(hal_data->Hpos_fb_index_enable), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-index-enable", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IO, &(hal_data->Hpos_extenc_index_enable), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  // Debug, will be removed
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-dbg-status-pdo-val", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_param_u32_new(name, HAL_RO, &(hal_data->Pstatus_val), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-dbg-latchstatus-pdo-val", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_param_u32_new(name, HAL_RO, &(hal_data->Platch_status_val), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-dbg-Hpos_cmd-pdo-val", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_s32_new(name, HAL_OUT, &(hal_data->Hpos_cmd_pdo_val), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-dbg-Hvel_cmd-pdo-val", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_s32_new(name, HAL_OUT, &(hal_data->Hvel_cmd_pdo_val), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-dbg-latchcontrol_cmd-pdo-val", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_param_u32_new(name, HAL_RO, &(hal_data->Platch_control_val), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-latched-count", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_s32_new(name, HAL_OUT, &(hal_data->Hpos_latched_count), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-index-delta-count", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_s32_new(name, HAL_OUT, &(hal_data->Hpos_fb_index_delta_count), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-fb-index-delta", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_fb_index_delta), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-index-delta-count", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_s32_new(name, HAL_OUT, &(hal_data->Hpos_extenc_index_delta_count), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-extenc-index-delta", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_extenc_index_delta), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-latched", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_float_new(name, HAL_OUT, &(hal_data->Hpos_latched), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_snprintf(name, sizeof(name), "%s.%s.%s.srv-pos-latch", LCEC_MODULE_NAME, master->name, slave->name);
-  if ((err = hal_pin_bit_new(name, HAL_IO, &(hal_data->Hpos_latch), comp_id)) != 0)
-  {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
-    return err;
-  }
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL init finish\n");
-  */
+ */
 rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init start finish\n");
-  for (i = 0; i < 4; i++)
+  /* for (i = 0; i < 4; i++)
   {
     *(hal_data->Hdin[i]) = 0;
     *(hal_data->Hdin_not[i]) = 0;
-  }
-rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 1 finish\n");
-  *(hal_data->enable) = 0;
-  *(hal_data->inhibit) = 0;
-  *(hal_data->ctrl_bit2) = 0;
-  *(hal_data->setpoint_enable) = 0;
-  *(hal_data->clr_fault) = 0;
-  *(hal_data->homing_start) = 0;
-  *(hal_data->save) = 0;
-
-  *(hal_data->switch_on_not_ready) = 0;
-  *(hal_data->switch_on_disabled) = 0;
-  *(hal_data->switch_on_ready) = 0;
-  *(hal_data->switched_on) = 0;
-  *(hal_data->enabled) = 0;
-  *(hal_data->fault) = 0;
-  *(hal_data->fault_react_active) = 0;
-  *(hal_data->quick_stop_active) = 0;
-rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 2 finish\n");
-  *(hal_data->warning) = 0;
-  *(hal_data->followinq_err) = 0;
-  *(hal_data->ref_point_set) = 0;
-  *(hal_data->in_pos) = 0;
-  *(hal_data->on_lim_switch) = 0;
-  *(hal_data->ethercat_ok) = 0;
-  *(hal_data->homing_error) = 0;
-  *(hal_data->motion_task_active) = 0;
-
- rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 3 finish\n");
-
-  *(hal_data->Hcur_cmd) = 0.0;
-  *(hal_data->Hvel_cmd) = 0.0;
-  *(hal_data->Htrq_cmd) = 0.0;
-  *(hal_data->Hmtrq_cmd) = 0.0;
-  *(hal_data->Hpos_cmd) = 0.0;
+  } */
 
   hal_data->pos_fb_srv_cnt_last = 0;
   hal_data->pos_fb_index_cnt = 0;
   hal_data->pos_fb_cnt_last = 0;
   hal_data->pos_fb_cnt = 0;
-  *(hal_data->Hpos_fb_cnt_raw_hi) = 0;
-  *(hal_data->Hpos_fb_cnt_raw_lo) = 0;
+  //*(hal_data->Hpos_fb_cnt_raw_hi) = 0;
+  //*(hal_data->Hpos_fb_cnt_raw_lo) = 0;
   hal_data->pos_fb_home_raw = 0;
-  *(hal_data->Hpos_fb_raw) = 0;
-  *(hal_data->Hpos_fb) = 0;
+  //*(hal_data->Hpos_fb_raw) = 0;
+  //*(hal_data->Hpos_fb) = 0;
   hal_data->Ppos_fb_scale = 0;
   hal_data->pos_fb_scale_old = 0;
 rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 4 finish\n");
- *(hal_data->Hpos_fb_index_delta_count) = 0;
- *(hal_data->Hpos_fb_index_delta) = 0;
+ //*(hal_data->Hpos_fb_index_delta_count) = 0;
+ //*(hal_data->Hpos_fb_index_delta) = 0;
 
- *(hal_data->Hpos_folloving_err) = 0;
+ /*(hal_data->Hpos_folloving_err) = 0;
 
- *(hal_data->Hvel_fb) = 0;
-
+ //*(hal_data->Hvel_fb) = 0;
+*/
   hal_data->pos_extenc_srv_cnt_last = 0;
   hal_data->pos_extenc_index_cnt = 0;
   hal_data->pos_extenc_cnt_last = 0;
   hal_data->pos_extenc_cnt = 0;
-  *(hal_data->Hpos_extenc_cnt_raw_hi) = 0;
+  /*(hal_data->Hpos_extenc_cnt_raw_hi) = 0;
   *(hal_data->Hpos_extenc_cnt_raw_lo) = 0;
+  */
   hal_data->pos_extenc_home_raw = 0;
-  *(hal_data->Hpos_extenc_raw) = 0.0;
+  /*(hal_data->Hpos_extenc_raw) = 0.0;
   *(hal_data->Hpos_extenc) = 0.0;
+  */
   hal_data->Ppos_extenc_scale = 1.0;
   hal_data->pos_extenc_scale_old = 2.0;
 rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 5 finish\n");
-  *(hal_data->Hpos_extenc_index_delta_count) = 0;
+  /*(hal_data->Hpos_extenc_index_delta_count) = 0;
   *(hal_data->Hpos_extenc_index_delta) = 0.0;
-
   *(hal_data->Hvel_extenc) = 0.0;
-
-
   *(hal_data->Hpos_latched_count) = 0;
   *(hal_data->Hpos_latched) = 0.0;
-
   *(hal_data->Hcur_fb) = 0.0;
-
-    hal_data->Pstatus_val = 0;
-   hal_data->Platch_status_val = 0;
-    hal_data->latch_status_val_last = 0;
-rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 6 finish\n");
-  *(hal_data->Hpos_cmd_pdo_val) = 0.0;
+*/
+  hal_data->Pstatus_val = 0;
+  //hal_data->Platch_status_val = 0;
+ // hal_data->latch_status_val_last = 0;
+  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 6 finish\n");
+  /*(hal_data->Hpos_cmd_pdo_val) = 0.0;
   *(hal_data->Hvel_cmd_pdo_val) = 0.0;
   *(hal_data->trq_cmd_pdo_val) = 0.0;
   *(hal_data->mtrq_cmd_pdo_val) = 0.0;
-  hal_data->control_cmd_val = 0;
-  hal_data->Platch_control_val = 0;
-  hal_data->latch_control_val_last = 0;
-
-
-  *(hal_data->Hpos_latch) = 0.0;
-  hal_data->pos_latch_last = 0.0;
-
+  */
+  hal_data->Pcontrol_cmd_val = 0;
+  // hal_data->Platch_control_val = 0;
+  //hal_data->latch_control_val_last = 0;
+  //hal_data->pos_latch_last = 0.0;
   hal_data->prbase_val = 0;
   hal_data->prbase_mask = 0;
-
   hal_data->drv_peak_current = 6;
-  
-  *(hal_data->Hpos_fb_index_enable) = 0;
-  *(hal_data->Hpos_extenc_index_enable) = 0;
-
-  
   rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Init 7 finish\n");
   return 0;
 }
 
 void lcec_ax20_check_scales(lcec_ax20_data_t *hal_data)
 {
-/*
+
   if (hal_data->Ppos_fb_scale != hal_data->pos_fb_scale_old)
   {
     if ((hal_data->Ppos_fb_scale < 1e-20) && (hal_data->Ppos_fb_scale > -1e-20))
@@ -800,13 +518,13 @@ void lcec_ax20_check_scales(lcec_ax20_data_t *hal_data)
     }
     hal_data->pos_extenc_scale_old = hal_data->Ppos_extenc_scale;
   }
-  */
+
 }
 
 void lcec_ax20_read(struct lcec_slave *slave, long period)
 {
   lcec_master_t *master = slave->master;
-  lcec_ax20_data_t *hal_data = (lcec_ax20_data_t *)slave->hal_data;
+  lcec_ax20_data_t *hal_data = (lcec_ax20_data_t *) slave->hal_data;
   uint8_t *pd = master->process_data;
   uint16_t status;
   int i;
@@ -819,7 +537,7 @@ void lcec_ax20_read(struct lcec_slave *slave, long period)
   {
     return;
   }
-  /*
+  
   lcec_ax20_check_scales(hal_data);
 
   // update position counter
@@ -854,8 +572,8 @@ void lcec_ax20_read(struct lcec_slave *slave, long period)
 
   hal_data->pos_fb_cnt_last = hal_data->pos_fb_cnt;
 
-  *hal_data->Hpos_fb_cnt_raw_hi = (hal_data->pos_fb_cnt >> 32) & 0xffffffff;
-  *hal_data->Hpos_fb_cnt_raw_lo = (hal_data->pos_fb_cnt) & 0xffffffff;
+  *(hal_data->Hpos_fb_cnt_raw_hi) = (hal_data->pos_fb_cnt >> 32) & 0xffffffff;
+  *(hal_data->Hpos_fb_cnt_raw_lo) = (hal_data->pos_fb_cnt) & 0xffffffff;
   *(hal_data->Hpos_fb_raw) = (double)(hal_data->pos_fb_cnt) * hal_data->Ppos_fb_scale / hal_data->prbase_val;
   *(hal_data->Hpos_fb) = (double)(hal_data->pos_fb_cnt - hal_data->pos_fb_index_cnt) * hal_data->Ppos_fb_scale / hal_data->prbase_val;
 
@@ -924,13 +642,16 @@ void lcec_ax20_read(struct lcec_slave *slave, long period)
 
   status = EC_READ_U16(&pd[hal_data->latchstatus_pdo_os]);
   pos_cnt = EC_READ_S32(&pd[hal_data->latchpos_pdo_os]);
-
+  /*
   for (i = 0; i < 4; i++)
   {
+    
     *(hal_data->Hdin[3 - i]) = (status & (0x1000 << i)) == (0x1000 << i);
     *(hal_data->Hdin_not[3 - i]) = !*(hal_data->Hdin[3 - i]);
+    
   }
-  /*
+  
+  
       if ((hal_data->Platch_status_val & 0x001f) != (hal_data->latch_control_val_last & 0x001f)){
           switch((hal_data->Platch_status_val & 0x001f)){
               case 0x0010:
@@ -952,22 +673,22 @@ void lcec_ax20_read(struct lcec_slave *slave, long period)
       if((hal_data->latch_status_val_last & 0x0F00) != (status & 0x0F00)){
       }
       hal_data->latch_status_val_last = hal_data->Platch_status_val;
-  */
+*/  
 
-  return;
+ 
 }
 
 void lcec_ax20_write(struct lcec_slave *slave, long period)
 {
   lcec_master_t *master = slave->master;
-  lcec_ax20_data_t *hal_data = (lcec_ax20_data_t *)slave->hal_data;
+  lcec_ax20_data_t *hal_data = (lcec_ax20_data_t *) slave->hal_data;
   uint8_t *pd = master->process_data;
-  uint16_t control , lcontrol;
+  uint16_t control , lcontrol = 0;
   int16_t tork;
   int16_t mtork;
   int32_t speed;
   int32_t position;
-  /*
+  
   lcec_ax20_check_scales(hal_data);
 
   control = 0x00;
@@ -1001,25 +722,27 @@ void lcec_ax20_write(struct lcec_slave *slave, long period)
     control |= (1 << 12);
   }
   EC_WRITE_U16(&pd[hal_data->control_cmd_pdo_os], control);
-  hal_data->control_cmd_val = control;
+  hal_data->Pcontrol_cmd_val = control;
 
-  speed = (*hal_data->Hvel_cmd) / hal_data->Ppos_fb_scale * ax20_RPS_FACTOR;
+  speed = *(hal_data->Hvel_cmd) / hal_data->Ppos_fb_scale * ax20_RPS_FACTOR;
   EC_WRITE_S32(&pd[hal_data->vel_cmd_pdo_os], speed);
-  *hal_data->Hvel_cmd_pdo_val = speed;
+  *(hal_data->Hvel_cmd_pdo_val) = speed;
 
   // position = (long long)((*hal_data->Hpos_cmd) / hal_data->Ppos_fb_scale * hal_data->prbase_val) + hal_data->pos_fb_index_cnt;
-  position = (long long)((*hal_data->Hpos_cmd) / hal_data->Ppos_fb_scale * hal_data->prbase_val);
+  position = (long long)(*(hal_data->Hpos_cmd) / hal_data->Ppos_fb_scale * hal_data->prbase_val);
   EC_WRITE_S32(&pd[hal_data->pos_cmd_pdo_os], position);
   *hal_data->Hpos_cmd_pdo_val = position;
 
   EC_WRITE_U16(&pd[hal_data->latchcontrol_cmd_pdo_os], lcontrol);
-  hal_data->Platch_control_val = lcontrol;
+   // hal_data->Platch_control_val = lcontrol;
+ 
 
-  tork =(*hal_data->trq_cmd_pdo_val);
+  *(hal_data->trq_cmd_pdo_val) = (int16_t) ( *(hal_data->Hcur_cmd)  *  3280 / hal_data->drv_peak_current);
+  tork = *(hal_data->trq_cmd_pdo_val);
   EC_WRITE_S16(&pd[hal_data->trq_cmd_pdo_os], tork);
-  mtork =(*hal_data->mtrq_cmd_pdo_val);
+
+  *(hal_data->mtrq_cmd_pdo_val) = (int16_t) ( *(hal_data->Hmtrq_cmd)  *  3280 / hal_data->drv_peak_current);
+  mtork = *(hal_data->mtrq_cmd_pdo_val);
   EC_WRITE_S16(&pd[hal_data->mtrq_cmd_pdo_os], mtork);
 
-  */
-  return;
 }
