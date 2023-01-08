@@ -38,7 +38,7 @@ typedef struct {
   hal_float_t *mtorq_cmd;
 
   int fb2_enabled;
-  int diag_enabled;s
+  int diag_enabled;
 
   hal_u32_t *status;
   hal_u32_t *latch_status;
