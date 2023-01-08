@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "lcec.h": "c",
+        "hal.h": "c",
+        "ecrt.h": "c",
+        "optional": "c"
+    }
+}

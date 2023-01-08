@@ -3,6 +3,8 @@ include Kbuild
 
 include $(MODINC)
 
+EXTRA_CFLAGS += -g
+
 ifeq ($(BUILDSYS),kbuild)
 
 # dirty workaround to get the RTAI directory
@@ -16,7 +18,7 @@ all:
 
 else
 
-LDFLAGS += -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lethercat
+LDFLAGS += -g -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lethercat
 
 all: modules
 
