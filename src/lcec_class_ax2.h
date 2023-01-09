@@ -21,6 +21,18 @@
 #include "lcec.h"
 #include "lcec_class_enc.h"
 
+#define AX2_STS_MASK       0xEFF  /* mask to remove manufacturer special bits */
+#define AX2_STS_SWION_DIS  0x250  /* switched on disabled */
+#define AX2_STS_RDY_SWION  0x231  /* ready to switch on   */
+#define AX2_STS_SWION_ENA  0x233  /* switched on enabled  */
+#define AX2_STS_ERROR      0x218  /* error                */
+
+#define AX2_CMD_ENA_QSTOP  0x00   /* enable quick stop   */
+#define AX2_CMD_DIS_QSTOP  0x06   /* disable quick stop  */
+#define AX2_CMD_ENA_SWION  0x07   /* enable switched  on */
+#define AX2_CMD_ENA_OP     0x0F   /* enable operation    */
+#define AX2_CMD_CLR_ERROR  0x80   /* clear error         */
+
 
 
 typedef struct {
