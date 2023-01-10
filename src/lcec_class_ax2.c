@@ -27,8 +27,8 @@ static const lcec_pindesc_t slave_pins[] = {
 
 
     { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on_dis),   "%s.%s.%s.%ssrv-sw-dis" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, rdy_to_on),  "%s.%s.%s.%ssrv-rdy-toon" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on),  "%s.%s.%s.%ssrv-sw-on" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, rdy_to_on),   "%s.%s.%s.%ssrv-rdy-toon" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on),       "%s.%s.%s.%ssrv-sw-on" },
     { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, enabled),     "%s.%s.%s.%ssrv-enabled" },
     { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, fault),       "%s.%s.%s.%ssrv-fault" },
 
