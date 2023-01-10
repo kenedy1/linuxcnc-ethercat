@@ -22,9 +22,9 @@
 #include "lcec_class_enc.h"
 
 #define AX2_STS_MASK       0xEFF  /* mask to remove manufacturer special bits */
-#define AX2_STS_SWION_DIS  0b1000000  /* switched on disabled */
-#define AX2_STS_RDY_SWION  0b0000001/* ready to switch on   */
-#define AX2_STS_SWION_ENA  0b0100011 /* switched on enabled  */
+#define AX2_STS_SW_ON_DIS  0b1000000  /* switched on disabled */
+#define AX2_STS_RDY_SW_ON  0b0000001/* ready to switch on   */
+#define AX2_STS_SW_ON_ENA  0b0100011 /* switched on enabled  */
 #define AX2_STS_ERROR      0b0101000  /* error                */
 #define AX2_STS_ENABLED    0b0100111  /* error                */
 
@@ -37,14 +37,19 @@
 
 
 typedef struct {
+  //drv cmd
   hal_bit_t *enable;
-  
-  hal_bit_t *enabled;
-  hal_bit_t *halted;
-  hal_bit_t *fault;
-
   hal_bit_t *halt;
-  hal_bit_t *drive_off;
+  hal_bit_t *drv_on;
+
+  //drv state
+  hal_bit_t *sw_on_dis;
+  hal_bit_t *rdy_to_on;
+  hal_bit_t *sw_on;
+  hal_bit_t *enabled;
+  hal_bit_t *fault;
+  
+  
 
   hal_float_t *velo_cmd;
   hal_float_t *torq_cmd;
