@@ -193,17 +193,13 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
 
   // check fault
   *(chan->fault) = 0;
-  // check error ETERCAT OK
-  if (((*(chan->status) >> 12) & 1) != 1) {
+  // check fault
+  if ((*(chan->status) & 0b1101111)==  AX2_STS_ERROR) {
    *(chan->fault) = 1;
   }
-  // check hardware error
-  if (((*(chan->status) >> 14) & 3) != 0) {
-   // *(chan->fault) = 1;
-  }
-
-  // check status
-  *(chan->enabled) = (((*(chan->status) >> 1) & 2) == 1);
+  if (((*(chan->status) & AX2_STS_ERROR) ) {
+  
+  *(chan->enabled) = *(chan->status) ;
   *(chan->halted) = (((*(chan->status) >> 6) & 1) == 1);
 
   // update position feedback
