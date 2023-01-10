@@ -23,7 +23,7 @@
 static const lcec_pindesc_t slave_pins[] = {
   { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, enable), "%s.%s.%s.%ssrv-enable" },
   { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, halt), "%s.%s.%s.%ssrv-halt" },
-  { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, drv_off), "%s.%s.%s.%ssrv-drv-off" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, drv_on), "%s.%s.%s.%ssrv-drv-off" },
 
 
     { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on_dis),   "%s.%s.%s.%ssrv-sw-dis" },
@@ -191,7 +191,7 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
     *(chan->enabled) = 0;
     *(chan->sw_on) = 0;
     *(chan->rdy_to_on) = 0;
-    *(chan->sw_on_dis) = 0
+    *(chan->sw_on_dis) = 0;
     return;
   }
   // check inputs
@@ -201,26 +201,23 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
   // check fault
   *(chan->fault) = 0;
   // check fault
-  if ((*(chan->status) & 0b1101111) == AX2_STS_ERROR)    *(chan->fault) = 1
+  if ((*(chan->status) & 0b1101111) == AX2_STS_ERROR)    *(chan->fault) = 1;
   else  *(chan->fault) = 0;
     
-  if ((*(chan->status) & 0b1001111) ==  AX2_STS_SW_ON_DIS)    *(chan->sw_on_dis) = 1
+  if ((*(chan->status) & 0b1001111) ==  AX2_STS_SW_ON_DIS)    *(chan->sw_on_dis) = 1;
   else  *(chan->sw_on_dis) = 0;
 
-if ((*(chan->status) & 0b1001111) ==  AX2_STS_RDY_SW_ON)    *(chan->rdy_to_on) = 1
+if ((*(chan->status) & 0b1001111) ==  AX2_STS_RDY_SW_ON)    *(chan->rdy_to_on) = 1;
   else  *(chan->rdy_to_on) = 0;
 
-if ((*(chan->status) & 0b1101111) ==  AX2_STS_SW_ON_ENA)    *(chan->sw_on) = 1
+if ((*(chan->status) & 0b1101111) ==  AX2_STS_SW_ON_ENA)    *(chan->sw_on) = 1;
   else  *(chan->sw_on) = 0;
 
-if ((*(chan->status) & 0b1101111) ==  AX2_STS_ENABLED)    *(chan->enabled) = 1
+if ((*(chan->status) & 0b1101111) ==  AX2_STS_ENABLED)    *(chan->enabled) = 1;
   else  *(chan->enabled) = 0;
 
  
-  if (((*(chan->status) & AX2_STS_ERROR) ) {
-  
-  *(chan->enabled) = *(chan->status) ;
-  *(chan->halted) = (((*(chan->status) >> 6) & 1) == 1);
+
 
   // update position feedback
   pos_cnt = EC_READ_U32(&pd[chan->pos_fbpdo_os]);
@@ -247,7 +244,7 @@ void lcec_class_ax2_write(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan)
   ctrl = 0;
   if  (slave->state.operational){
 
-    if (*(chan->sw_on_dis)   ctrl =  0b10;
+    if (*(chan->sw_on_dis))   ctrl =  0b10;
     if (*(chan->rdy_to_on) && *(chan->drv_on)) ctrl = 0b111;
     if (*(chan->sw_on) && *(chan->enable) && *(chan->drv_on)) ctrl = 0b1111;
     if (*(chan->enabled) && !(*(chan->enable))) ctrl = 0b0111;
@@ -272,6 +269,6 @@ void lcec_class_ax2_write(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan)
  EC_WRITE_S16(&pd[chan->mtrq_cmd_pdo_os], (int16_t)1000);
   lctrl = 0;
  EC_WRITE_U16(&pd[chan->latch_ctrl_pdo_os],  lctrl);
-  }
+  
 }
 
