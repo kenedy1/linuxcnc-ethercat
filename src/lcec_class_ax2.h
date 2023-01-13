@@ -22,11 +22,11 @@
 #include "lcec_class_enc.h"
 
 #define AX2_STS_MASK       0xEFF  /* mask to remove manufacturer special bits */
-#define AX2_STS_SW_ON_DIS  0b1000000  /* switched on disabled */
-#define AX2_STS_RDY_SW_ON  0b0000001/* ready to switch on   */
-#define AX2_STS_SW_ON_ENA  0b0100011 /* switched on enabled  */
-#define AX2_STS_ERROR      0b0101000  /* error                */
-#define AX2_STS_ENABLED    0b0100111  /* error                */
+#define AX2_STS_SW_ON_DIS  0b01000000  /* switched on disabled */
+#define AX2_STS_RDY_SW_ON  0b00000001/* ready to switch on   */
+#define AX2_STS_SW_ON_ENA  0b00100011 /* switched on enabled  */
+#define AX2_STS_ERROR      0b00001000  /* error                */
+#define AX2_STS_ENABLED    0b00100111  /* error                */
 
 #define AX2_CMD_ENA_QSTOP  0x00   /* enable quick stop   */
 #define AX2_CMD_DIS_QSTOP  0x06   /* disable quick stop  */
