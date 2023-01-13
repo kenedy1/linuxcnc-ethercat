@@ -24,13 +24,19 @@ static const lcec_pindesc_t slave_pins[] = {
   { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, enable), "%s.%s.%s.%ssrv-enable" },
   { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, halt), "%s.%s.%s.%ssrv-halt" },
   { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, drv_on), "%s.%s.%s.%ssrv-drv-on" },
+  { HAL_BIT, HAL_IN, offsetof(lcec_class_ax2_chan_t, fault_rst), "%s.%s.%s.%ssrv-fault-rst" },
 
 
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on_dis),   "%s.%s.%s.%ssrv-sw-dis" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, rdy_to_on),   "%s.%s.%s.%ssrv-rdy-toon" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on),       "%s.%s.%s.%ssrv-sw-on" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, enabled),     "%s.%s.%s.%ssrv-enabled" },
-    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, fault),       "%s.%s.%s.%ssrv-fault" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on_ready),   "%s.%s.%s.%ssrv-sw-on-rdy" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, switched_on),   "%s.%s.%s.%ssrv-switched-on" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, op_enabled),    "%s.%s.%s.%ssrv-op-en" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, st_fault),         "%s.%s.%s.%ssrv-stfault" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, volt_enabled),  "%s.%s.%s.%ssrv-volt-en" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, quick_stop),    "%s.%s.%s.%ssrv-quick-stop" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, sw_on_disabled),"%s.%s.%s.%ssrv-sw-on-dis" },
+    { HAL_BIT, HAL_OUT, offsetof(lcec_class_ax2_chan_t, drv_fault),         "%s.%s.%s.%ssrv-drv-fault" },
+
+
 
   { HAL_FLOAT, HAL_IN, offsetof(lcec_class_ax2_chan_t, velo_cmd),     "%s.%s.%s.%ssrv-velo-cmd" },
   { HAL_FLOAT, HAL_IN, offsetof(lcec_class_ax2_chan_t, torq_cmd),     "%s.%s.%s.%ssrv-torq-cmd" },
@@ -79,6 +85,7 @@ int lcec_class_ax2_init(struct lcec_slave *slave, ec_pdo_entry_reg_t *pdo_entry_
   uint16_t idn_vel_scale = 5000;
   int16_t idn_vel_exp = 100;
   char enc_pfx[HAL_NAME_LEN];
+
 
   // initialize POD entries
 /*
@@ -141,13 +148,14 @@ SM3: PhysAddr 0x1140, DefaultSize    0, ControlRegister 0x22, Enable 1
   chan->scale_fb2 = 1.0;
   chan->vel_scale = ((double) idn_vel_scale) * pow(10.0, (double) idn_vel_exp);
   chan->pos_resolution = idn_pos_resolution;
-
+  chan->enable_old = 0;
   if (chan->vel_scale > 0.0) {
     chan->vel_output_scale = 60.0 / chan->vel_scale;
   } else {
     chan->vel_output_scale = 0.0;
   }
-
+  chan->aut_fault_res_delay = FAULT_AUTORESET_DELAY_NS;
+  chan->auto_fault_reset = 1;
   return 0;
 }
 
@@ -183,45 +191,29 @@ void lcec_class_ax2_read(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan) 
   uint8_t *pd = master->process_data;
   uint32_t pos_cnt;
 
-  // wait for slave to be operational
-  if (!slave->state.operational) {
-    chan->enc.do_init = 1;
-    chan->enc_fb2.do_init = 1;
-    *(chan->fault) = 1;
-    *(chan->enabled) = 0;
-    *(chan->sw_on) = 0;
-    *(chan->rdy_to_on) = 0;
-    *(chan->sw_on_dis) = 0;
-    return;
-  }
-  else
-  {
   // check inputs
   lcec_class_ax2_check_scales(chan);
   *(chan->status) = EC_READ_U16(&pd[chan->status_pdo_os]);
-
-  // check fault
-  *(chan->fault) = 0;
-  // check fault
-  if ((*(chan->status) & 0b0001000) == AX2_STS_ERROR)    *(chan->fault) = 1;
-  else  *(chan->fault) = 0;
-    
-  if ((*(chan->status) & 0b1001111) ==  AX2_STS_SW_ON_DIS)    *(chan->sw_on_dis) = 1;
-  else  *(chan->sw_on_dis) = 0;
-
-if ((*(chan->status) &   0b1001111) ==  AX2_STS_RDY_SW_ON)    *(chan->rdy_to_on) = 1;
-  else  *(chan->rdy_to_on) = 0;
-
-if ((*(chan->status) & 0b1101111) ==  AX2_STS_SW_ON_ENA)    *(chan->sw_on) = 1;
-  else  *(chan->sw_on) = 0;
-
-if ((*(chan->status) & 0b1101111) ==  AX2_STS_ENABLED)    *(chan->enabled) = 1;
-  else  *(chan->enabled) = 0;
+/*
+  *(chan->sw_on_ready)    = (*(chan->status) >> 0) & 1;
+  *(chan->switched_on)    = (*(chan->status) >> 1) & 1;
+  *(chan->op_enabled)     = (*(chan->status) >> 2) & 1;
+  *(chan->st_fault)       = (*(chan->status) >> 3) & 1;
+  *(chan->volt_enabled)   = (*(chan->status) >> 4) & 1;
+  *(chan->quick_stop)     = (*(chan->status) >> 5) & 1;
+  *(chan->sw_on_disabled) = (*(chan->status) >> 6) & 1;
+ */
+ // update fault output
+/*
+  if (chan->aut_fault_res_delay > 0) {
+    chan->aut_fault_res_delay -= slave->master->app_time_period;
+    *(chan->drv_fault) = 0;
+  } else {
+    *(chan->drv_fault)  = *(chan->st_fault)  && *(chan->enable);
   }
- 
-
-
+*/
   // update position feedback
+  
   pos_cnt = EC_READ_U32(&pd[chan->pos_fbpdo_os]);
   class_enc_update(&chan->enc, chan->pos_resolution, chan->scale_rcpt, pos_cnt, 0, 0);
 
@@ -241,17 +233,36 @@ void lcec_class_ax2_write(struct lcec_slave *slave, lcec_class_ax2_chan_t *chan)
   uint8_t *pd = master->process_data;
   uint16_t ctrl,lctrl;
   double velo_cmd_raw;
+  
+  int enable_edge;
+  /*
+  enable_edge = 0;
+  enable_edge = *(chan->enable) && !(chan->enable_old);
+  (chan->enable_old) = *(chan->enable); 
+  c
 
-  // write outputs
-  ctrl = 0;
-  if  (slave->state.operational){
-
-    if (*(chan->sw_on_dis) )   ctrl =  0b10;
-    if (*(chan->rdy_to_on) && *(chan->drv_on)) ctrl = 0b111;
-    if (*(chan->sw_on) && *(chan->enable) && *(chan->drv_on)) ctrl = 0b1111;
-    if (*(chan->enabled) && !(*(chan->enable))) ctrl = 0b0111;
-    if (*(chan->enabled) && !(*(chan->drv_on))) ctrl = 0b10;
+  ctrl = (1 << 2); // quick stop is not supported
+  if (*(chan->st_fault)) {
+    //home = 0; 
+    if (*(chan->fault_rst)) {
+      ctrl |= (1 << 7); // fault reset
+    }
+    if (chan->auto_fault_reset && enable_edge) {
+      chan->aut_fault_res_delay = FAULT_AUTORESET_DELAY_NS;
+      ctrl |= (1 << 7); // fault reset
+    }
+  } else {
+    if (*(chan->enable)) {
+      ctrl |= (1 << 1); // enable voltage
+      if (*(chan->sw_on_ready)){
+        ctrl |= (1 << 0); // switch on
+        if (*(chan->switched_on)) {
+          ctrl |= (1 << 3); // enable op
+        }
+      }
+    }
   }
+*/
   EC_WRITE_U16(&pd[chan->ctrl_pdo_os], ctrl);
 
   // set velo command

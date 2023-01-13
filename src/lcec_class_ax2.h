@@ -34,6 +34,7 @@
 #define AX2_CMD_ENA_OP     0x0F   /* enable operation    */
 #define AX2_CMD_CLR_ERROR  0x80   /* clear error         */
 
+#define FAULT_AUTORESET_DELAY_NS 10000000LL
 
 
 typedef struct {
@@ -41,15 +42,19 @@ typedef struct {
   hal_bit_t *enable;
   hal_bit_t *halt;
   hal_bit_t *drv_on;
+    hal_bit_t *fault_rst;
 
   //drv state
-  hal_bit_t *sw_on_dis;
-  hal_bit_t *rdy_to_on;
-  hal_bit_t *sw_on;
-  hal_bit_t *enabled;
-  hal_bit_t *fault;
-  
-  
+  hal_bit_t *sw_on_ready;
+  hal_bit_t *switched_on;
+  hal_bit_t *op_enabled;
+  hal_bit_t *volt_enabled;
+  hal_bit_t *st_fault;
+  hal_bit_t *quick_stop;
+  hal_bit_t *sw_on_disabled;
+
+  hal_bit_t *drv_fault;
+
 
   hal_float_t *velo_cmd;
   hal_float_t *torq_cmd;
@@ -59,6 +64,9 @@ typedef struct {
   int diag_enabled;
 
   hal_u32_t *status;
+  
+
+ // hal_u32_t *scmd;
   hal_u32_t *latch_status;
   hal_float_t *latch_pos;
   hal_float_t *torq_fb;
@@ -94,6 +102,9 @@ typedef struct {
   hal_float_t scale_fb2;
   hal_float_t vel_scale;
   hal_u32_t   pos_resolution;
+  hal_u32_t enable_old;
+  hal_u32_t aut_fault_res_delay;
+  hal_u32_t auto_fault_reset;
 
   lcec_class_enc_data_t enc;
   lcec_class_enc_data_t enc_fb2;
@@ -106,6 +117,7 @@ typedef struct {
   double vel_output_scale;
 
   int toggle;
+  
 
 } lcec_class_ax2_chan_t;
 
