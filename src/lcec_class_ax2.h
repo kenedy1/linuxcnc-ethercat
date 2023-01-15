@@ -74,12 +74,12 @@ typedef struct {
   unsigned int vel_cmd_pdo_os;
 */
 //  pdos 1707 cnd 
-  unsigned int pos_cmd_pdo_os;  //32
-  unsigned int vel_cmd_pdo_os; //32
-  unsigned int trq_cmd_pdo_os; //16
-  unsigned int mtrq_cmd_pdo_os; //16
-  unsigned int ctrl_pdo_os; //16
-  unsigned int latch_ctrl_pdo_os; //16   16 B total
+  unsigned int pos_cmd_pdo_os;    //32
+  unsigned int vel_cmd_pdo_os;     //32
+  unsigned int trq_cmd_pdo_os;      //16
+  unsigned int mtrq_cmd_pdo_os;     //16
+  unsigned int ctrl_pdo_os;         //16
+  unsigned int latch_ctrl_pdo_os;    //16   16 B total
 //PDOS  1B07  fb
   unsigned int pos_fbpdo_os;  //32
   unsigned int pos_fb2_pdos_os; //32
