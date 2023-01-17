@@ -19,18 +19,19 @@
 #define _LCEC_AX2000_H_
 
 #include "lcec.h"
-#include "lcec_class_ax2.h"
+
 
 #define LCEC_AX2000_VID LCEC_BECKHOFF_VID
 #define LCEC_AX2006_PID 0x07d06014
 #define LCEC_AX2006_PDOS 13
+
 //#define LCEC_AX5103_PID 0x13ef6012
 //#define LCEC_AX5106_PID 0x13f26012
 //#define LCEC_AX5112_PID 0x13f86012
 //#define LCEC_AX5118_PID 0x13fe6012
 
-int lcec_ax2000_preinit(struct lcec_slave *slave);
 int lcec_ax2000_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pdo_entry_regs);
 
 #endif
 
+s
