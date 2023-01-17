@@ -260,7 +260,7 @@ static const lcec_typelist_t types[] = {
 
   // modusoft PH3LM2RM converter
   { lcecSlaveTypePh3LM2RM, LCEC_PH3LM2RM_VID, LCEC_PH3LM2RM_PID, LCEC_PH3LM2RM_PDOS, 0, NULL, lcec_ph3lm2rm_init},
-  { lcecSlaveTypeAX2000 , LCEC_BECKHOFF_VID, LCEC_AX2006_PID, LCEC_AX2006_PDOS,0,NULL, lcec_ax2000_init},
+  { lcecSlaveTypeAX2000     , LCEC_BECKHOFF_VID, LCEC_AX2006_PID, LCEC_AX2006_PDOS,0,NULL, lcec_ax2000_init},
   { lcecSlaveTypeInvalid }
 };
 
