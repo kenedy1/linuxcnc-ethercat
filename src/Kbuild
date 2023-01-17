@@ -3,7 +3,6 @@ lcec-objs := \
     lcec_main.o \
     lcec_class_enc.o \
     lcec_class_ax5.o \
-    lcec_class_ax2.o \
     lcec_generic.o \
     lcec_ax5100.o \
     lcec_ax5200.o \

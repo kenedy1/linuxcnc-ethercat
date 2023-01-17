@@ -1,0 +1,37 @@
+# Halshow settings
+# This file is generated automatically.
+wm geometry . 1102x475+121+274
+placeFrames 0.42151162790697677
+set ::ratio 0.42151162790697677
+set ::old_w_leftf 160
+set ::watchlist {
+    pin+lcec.0.AX.enable
+    pin+lcec.0.all-op
+    pin+lcec.0.link-up
+    pin+lcec.0.pll-out
+    pin+lcec.0.pll-err
+    pin+lcec.0.pll-reset-count
+    pin+lcec.0.read.time
+    pin+lcec.0.slaves-responding
+    pin+lcec.0.state-init
+    pin+lcec.0.state-op
+    pin+lcec.0.state-preop
+    pin+lcec.0.state-safeop
+    pin+lcec.state-safeop
+    pin+lcec.state-op
+    pin+lcec.0.AX.pos-fb
+    pin+lcec.0.AX.pos2-fb
+    pin+lcec.0.AX.vel-rpm-cmd
+    pin+lcec.0.AX.stat-volt-enabled
+    pin+lcec.0.AX.foll-err
+    pin+lcec.0.AX.cmd-torq
+    pin+lcec.0.AX.act-current
+    pin+lcec.0.AX.max-torq
+}
+set ::workmode watchhal
+set ::watchInterval 100
+set ::col1_width 100
+set ::ffmts 
+set ::ifmts 
+set ::alwaysOnTop 0
+set ::autoSaveWatchlist 1

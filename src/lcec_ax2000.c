@@ -26,8 +26,8 @@
 #define OPMODE_HOING    0x06
 
 typedef struct {
-  hal_float_t *vel_fb_rpm;
-  hal_float_t *vel_fb_rpm_abs;
+  hal_float_t *pos_fb;
+  hal_float_t *pos2_fb;
   hal_float_t *vel_rpm_cmd;
 
   hal_bit_t   *stat_switch_on_ready;
@@ -51,10 +51,10 @@ typedef struct {
   hal_float_t *act_current;
   hal_u32_t   *warn_code;
   hal_u32_t   *error_code;
-  hal_float_t *drive_temp;
+  hal_float_t *foll_err;
 
-  hal_u32_t   *vel_ramp_up;
-  hal_u32_t   *vel_ramp_down;
+  hal_u32_t   *cmd_torq;
+  hal_u32_t   *max_torq;
 
   hal_bit_t   auto_fault_reset;
   hal_float_t vel_scale;
@@ -86,8 +86,8 @@ typedef struct {
 } lcec_ax2000_data_t;
 // HAL pins 
 static const lcec_pindesc_t slave_pins[] = {
-  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, vel_fb_rpm),           "%s.%s.%s.vel-fb-rpm" },
-  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, vel_fb_rpm_abs),       "%s.%s.%s.vel-fb-rpm-abs" },
+  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, pos_fb),           "%s.%s.%s.pos-fb" },
+  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, pos2_fb),       "%s.%s.%s.pos2-fb" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_switch_on_ready), "%s.%s.%s.stat-switch-on-ready" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_switched_on),     "%s.%s.%s.stat-switched-on" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_op_enabled),      "%s.%s.%s.stat-op-enabled" },
@@ -101,20 +101,20 @@ static const lcec_pindesc_t slave_pins[] = {
   { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, act_current),          "%s.%s.%s.act-current" },
   { HAL_U32,   HAL_OUT,   offsetof(lcec_ax2000_data_t, warn_code),            "%s.%s.%s.warn-code" },
   { HAL_U32,   HAL_OUT,   offsetof(lcec_ax2000_data_t, error_code),           "%s.%s.%s.error-code" },
-  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, drive_temp),           "%s.%s.%s.drive-temp" },
+  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, foll_err),           "%s.%s.%s.foll-err" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, quick_stop),           "%s.%s.%s.quick-stop" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, enable),               "%s.%s.%s.enable" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, fault_reset),          "%s.%s.%s.fault-reset" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, halt),                 "%s.%s.%s.halt" },
   { HAL_FLOAT, HAL_IN,    offsetof(lcec_ax2000_data_t, vel_rpm_cmd),          "%s.%s.%s.vel-rpm-cmd" },
-  { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, vel_ramp_up),          "%s.%s.%s.vel-ramp-up" },
-  { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, vel_ramp_down),        "%s.%s.%s.vel-ramp-down" },
+  { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, cmd_torq),          "%s.%s.%s.cmd-torq" },
+  { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, max_torq),        "%s.%s.%s.max-torq" },
   { HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL }
 };
 // HAL parameters
 static const lcec_pindesc_t slave_params[] = {
-  { HAL_BIT,    HAL_RW, offsetof(lcec_dems300_data_t, auto_fault_reset),  "%s.%s.%s.auto-fault-reset" },
-  { HAL_FLOAT,  HAL_RW, offsetof(lcec_dems300_data_t, vel_scale),         "%s.%s.%s.vel-scale" },
+  { HAL_BIT,    HAL_RW, offsetof(lcec_ax2000_data_t, auto_fault_reset),  "%s.%s.%s.auto-fault-reset" },
+  { HAL_FLOAT,  HAL_RW, offsetof(lcec_ax2000_data_t, vel_scale),         "%s.%s.%s.vel-scale" },
   { HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL }
 };
 
@@ -127,7 +127,7 @@ static ec_pdo_entry_info_t lcec_ax2000_in[] = {
   {0x60f4, 0x00, 32},  // Following error     DINT
   {0x6041, 0x00, 16},  // Status word         UINT
   {0x2901, 0x00, 16},  // Latch status        UINT
-  {0x2902, 0x00, 32},  // Latch position      DINT
+  {0x2902, 0x00, 32}  // Latch position      DINT
 };
 //to servo 0x1707
 static ec_pdo_entry_info_t lcec_ax2000_out[] = {
@@ -141,20 +141,20 @@ static ec_pdo_entry_info_t lcec_ax2000_out[] = {
 };
 
 static ec_pdo_info_t lcec_ax2000_pdos_out[] = {
-     {0x1707, 7, lcec_ax2000_out}
+     {0x1707, 6, lcec_ax2000_out}
 };
 
-static ec_pdo_info_t lcec_ax2000_pdos_out[] = {
-     {0x1b07, 6, lcec_ax2000_in}
+static ec_pdo_info_t lcec_ax2000_pdos_in[] = {
+     {0x1b07, 7, lcec_ax2000_in}
 };
 
 
 
 static ec_sync_info_t lcec_ax2000_syncs[] = {
-    {0, EC_DIR_OUTPUT, 0, NULL},
-    {1, EC_DIR_INPUT,  0, NULL},
-    {2, EC_DIR_OUTPUT, 1, lcec_ax2000_pdos_out},  //0x1707
-    {3, EC_DIR_INPUT,  1, lcec_ax2000_pdos_in},  //0x1b07
+    {0, EC_DIR_OUTPUT, 0, NULL,EC_WD_ENABLE},
+    {1, EC_DIR_INPUT,  0, NULL,EC_WD_ENABLE},
+    {2, EC_DIR_OUTPUT, 1, lcec_ax2000_pdos_out,EC_WD_ENABLE},  //0x1707
+    {3, EC_DIR_INPUT,  1, lcec_ax2000_pdos_in,EC_WD_ENABLE},  //0x1b07
     {0xff}
 };
 
@@ -244,7 +244,7 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   uint16_t status,error,lstatus;
   int8_t opmode_in;
   int32_t speed_raw;
-  int32_t pos_fb ,pos_fb2;
+  int32_t pos_fb , pos_fb2;
   double rpm;
 
   // check for change in scale value
@@ -253,11 +253,13 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   // read current
   *(hal_data->act_current) = (double) EC_READ_U16(&pd[hal_data->fb_torq_pdo_os]) / 100.0;
   // follerr
-  *(hal_data->drive_temp) = (double) EC_READ_32(&pd[hal_data->fb_follerr_pdo_os]) / 10.0;
+  *(hal_data->foll_err) = (double) EC_READ_S32(&pd[hal_data->fb_follerr_pdo_os]) / 10.0;
   // read warn and error code
-  pos_fb    = EC_READ_32(&pd[hal_data->fb_pos_pdo_os]);
-  
-  pos_fb    = EC_READ_32(&pd[hal_data->fb_pos2_pdo_os]);
+  pos_fb    = EC_READ_S32(&pd[hal_data->fb_pos_pdo_os]);
+  *(hal_data->pos_fb)= (double) pos_fb / 10000;
+
+  pos_fb2    = EC_READ_S32(&pd[hal_data->fb_pos2_pdo_os]);
+  *(hal_data->pos2_fb)= (double) pos_fb2 / 10000;
 
   *(hal_data->error_code) = 0; //low byte
   *(hal_data->warn_code) =  8; //high byte
@@ -309,10 +311,10 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   }
 
   // fb position
-  speed_raw = EC_READ_32(&pd[hal_data->fb_pos_lat_pdo_os]);
-  rpm = (double)speed_raw * hal_data->vel_scale_rcpt;
-  *(hal_data->vel_fb_rpm) = rpm;
-  *(hal_data->vel_fb_rpm_abs) = fabs(rpm);
+  speed_raw = EC_READ_S32(&pd[hal_data->fb_pos_lat_pdo_os]);
+ // rpm = (double)speed_raw * hal_data->vel_scale_rcpt;
+ // *(hal_data->vel_fb_rpm) = rpm;
+ // *(hal_data->vel_fb_rpm_abs) = fabs(rpm);
 
 
 }
@@ -369,13 +371,13 @@ void lcec_ax2000_write(struct lcec_slave *slave, long period) {
 
   //halt
   control |= (*(hal_data->halt) << 8); // halt
-
+  EC_WRITE_U16(&pd[hal_data->controlW_pdo_os], control);
   
 
   //write ramp times
-  EC_WRITE_32(&pd[hal_data->cmd_pos_pdo_os], 0);
-  EC_WRITE_S16(&pd[hal_data->cmd_torq_pdo_os], *(hal_data->vel_ramp_up));
-  EC_WRITE_S16(&pd[hal_data->max_torq_pdo_os], *(hal_data->vel_ramp_down));
+  EC_WRITE_S32(&pd[hal_data->cmd_pos_pdo_os], 0);
+  EC_WRITE_S16(&pd[hal_data->cmd_torq_pdo_os], *(hal_data->cmd_torq));
+  EC_WRITE_S16(&pd[hal_data->max_torq_pdo_os], *(hal_data->max_torq));
 
   // set RPM
   speed_raw = *(hal_data->vel_rpm_cmd) * hal_data->vel_scale;
@@ -385,10 +387,10 @@ void lcec_ax2000_write(struct lcec_slave *slave, long period) {
   if (speed_raw < (double)-0x7fff) {
     speed_raw = (double)-0x7fff;
   }
-  EC_WRITE_32(&pd[hal_data->cmd_vel_pdo_os], (int32_t)speed_raw);
+  EC_WRITE_S32(&pd[hal_data->cmd_vel_pdo_os], (int32_t)speed_raw);
 
 
-  EC_WRITE_U16(&pd[hal_data->controlW_pdo_os], control);
+  
 
   lcontrol = 0;
   EC_WRITE_U16(&pd[hal_data->lat_controlW_pdo_os], lcontrol);

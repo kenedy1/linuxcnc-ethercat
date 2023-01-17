@@ -1,0 +1,85 @@
+###########################################################
+#
+# CIA 402 example snippet Hal 
+#
+###########################################################
+
+###########################################################
+# Setup
+###########################################################
+
+loadrt [KINS]KINEMATICS
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS 
+
+loadusr -W lcec_conf ecat.xml
+loadrt lcec
+#loadrt cia402 count=1
+#loadrt pid num_chan=1
+
+
+###########################################################
+# Functions servo-thread
+###########################################################
+
+addf lcec.read-all servo-thread
+#addf cia402.0.read-all servo-thread
+
+addf motion-command-handler servo-thread
+addf motion-controller servo-thread
+
+#addf pid.0.do-pid-calcs                    servo-thread
+
+#addf cia402.0.write-all servo-thread
+addf lcec.write-all servo-thread
+
+# set PID loop gains from inifile
+#setp pid.0.Pgain [JOINT_0]P
+#setp pid.0.Igain [JOINT_0]I
+#setp pid.0.Dgain [JOINT_0]D
+#setp pid.0.bias [JOINT_0]BIAS
+#setp pid.0.FF0 [JOINT_0]FF0
+#setp pid.0.FF1 [JOINT_0]FF1
+#setp pid.0.FF2 [JOINT_0]FF2
+#setp pid.0.deadband [JOINT_0]DEADBAND
+#setp pid.0.maxoutput [JOINT_0]MAX_OUTPUT
+
+#########################################
+#nets
+#########################################
+#net   emc-enable => iocontrol.0.emc-enable-in
+#sets  emc-enable 1
+
+
+
+#config
+#setp cia402.0.csp-mode 0
+#setp cia402.0.pos-scale 100000
+#setp cia402.0.velo-scale 100
+
+
+#from servo(ethercat) to cia402
+#net x-statusword       lcec.0.0.cia-statusword => cia402.0.statusword
+#setp cia402.0.opmode-display 9
+
+#net x-drv-act-pos      lcec.0.0.actual-position => cia402.0.drv-actual-position
+#net x-drv-act-velo    lcec.0.0.actual-velocity => cia402.0.drv-actual-velocity
+
+#net x-volt-en <= cia402.0.stat-op-enabled => pid.0.enable
+#from cia402 to servo(ethercat) 
+#net x-controlword          cia402.0.controlword => lcec.0.0.cia-controlword
+#net x-modes-of-operation  cia402.0.opmode => lcec.0.0.opmode
+#net x-drv-target-pos       cia402.0.drv-target-position => lcec.0.0.target-position
+#net x-drv-target-velo      cia402.0.drv-target-velocity => lcec.0.0.target-velocity
+
+#from motion to cia
+#net x-enable    <= joint.0.amp-enable-out => cia402.0.enable
+#net x-amp-fault => joint.0.amp-fault-in   <= cia402.0.drv-fault
+#net x-pos-cmd   <= joint.0.motor-pos-cmd  => cia402.0.pos-cmd
+#net x-pos-fb    => joint.0.motor-pos-fb   <= cia402.0.pos-fb
+#net x-pos-fb    => pid.0.feedback
+#net x-pos-cmd  => pid.0.command
+#net motor.0.command  pid.0.output  =>  cia402.0.velocity-cmd
+#homing
+#net x-home-index <= joint.0.index-enable  => cia402.0.home
+#setp lcec.0.0.target-maxtorq  20000
+#setp lcec.0.0.target-torq  3000

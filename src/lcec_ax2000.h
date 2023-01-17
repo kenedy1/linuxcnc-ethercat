@@ -33,5 +33,3 @@
 int lcec_ax2000_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *pdo_entry_regs);
 
 #endif
-
-s

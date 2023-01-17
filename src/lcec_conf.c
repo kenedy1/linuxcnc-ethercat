@@ -38,7 +38,7 @@
 #include "lcec_el7411.h"
 #include "lcec_class_ax5.h"
 
-#include "lcec_class_ax2.h"
+#include "lcec_ax2000.h"
 
 typedef enum {
   MODPARAM_TYPE_BIT,
