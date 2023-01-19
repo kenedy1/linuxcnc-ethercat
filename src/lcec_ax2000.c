@@ -19,15 +19,30 @@
 #include "lcec.h"
 #include "lcec_ax2000.h"
 
+#define LATCH_ENABLED 1
+
 #define AX2000_FAULT_AUTORESET_DELAY_NS 100000000LL
 #define OPMODE_POSITION 0x08
 #define OPMODE_VELOCITY 0x09
 #define OPMODE_TORQUE   0x0A
 #define OPMODE_HOING    0x06
 
+#define TORQUE_SCALE  3280           //max driver curent 6A
+#define VELO_SCALE_RPM  (double)(2^32(128*4000*60)) // velo scale 1 RPM
+#define POS_SCALE_1T    2^20      // pos scale 1 turn
+
+
+//latch control world mask
+#define  LATCH_CWB_EN_EXT_1_P   0x0001
+#define  LATCH_CWB_RD_EXT_1_P   0x0100
+//latch status worl mask
+#define  LATCH_VALID_SWB_EXTLT_1_P    0x0001
+#define  LATCH_ACK_VAL_SWB_EXTLT_1_P  0x0100
+#define  LATCH_SWB_DI1                0x8000
+
 typedef struct {
   hal_float_t *pos_fb;
-  hal_float_t *pos2_fb;
+  hal_float_t *opmode_fb;
   hal_float_t *vel_rpm_cmd;
 
   hal_bit_t   *stat_switch_on_ready;
@@ -63,9 +78,10 @@ typedef struct {
   double      vel_scale_rcpt;
 
   unsigned int fb_pos_pdo_os;
-  unsigned int fb_pos2_pdo_os;
   unsigned int fb_torq_pdo_os;
   unsigned int fb_follerr_pdo_os;
+  unsigned int fb_opmode_pdo_os;
+  unsigned int gap;
   unsigned int status_pdo_os;
   unsigned int latch_status_pdo_os;
   unsigned int fb_pos_lat_pdo_os;
@@ -74,6 +90,8 @@ typedef struct {
   unsigned int cmd_vel_pdo_os;
   unsigned int cmd_torq_pdo_os;
   unsigned int max_torq_pdo_os;
+  unsigned int cmd_opmode_pdo_os;
+  unsigned int gap1;
   unsigned int controlW_pdo_os;
   unsigned int lat_controlW_pdo_os;
 
@@ -87,7 +105,7 @@ typedef struct {
 // HAL pins 
 static const lcec_pindesc_t slave_pins[] = {
   { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, pos_fb),           "%s.%s.%s.pos-fb" },
-  { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, pos2_fb),       "%s.%s.%s.pos2-fb" },
+  { HAL_32,    HAL_OUT,   offsetof(lcec_ax2000_data_t, opmode_fb),       "%s.%s.%s.opmode-fb" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_switch_on_ready), "%s.%s.%s.stat-switch-on-ready" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_switched_on),     "%s.%s.%s.stat-switched-on" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_op_enabled),      "%s.%s.%s.stat-op-enabled" },
@@ -119,33 +137,36 @@ static const lcec_pindesc_t slave_params[] = {
 };
 
 
-//from servo 0x1b07
+//from servo 0x1b08
 static ec_pdo_entry_info_t lcec_ax2000_in[] = {
   {0x6064, 0x00, 32}, // Position fedbeck     DINT
-  {0x35C9, 0x00, 32}, // Position feedback 2  DINT
   {0x6077, 0x00, 16}, // Torque feedback      INT
-  {0x60f4, 0x00, 32},  // Following error     DINT
-  {0x6041, 0x00, 16},  // Status word         UINT
-  {0x2901, 0x00, 16},  // Latch status        UINT
+  {0x60f4, 0x00, 32}, // Following error     DINT
+  {0x6061, 0x00, 8},  // Operantion mode     USINT
+  {0x0000, 0x00, 8},  // Gap
+  {0x6041, 0x00, 16}, // Status word         UINT
+  {0x2901, 0x00, 16}, // Latch status        UINT
   {0x2902, 0x00, 32}  // Latch position      DINT
 };
-//to servo 0x1707
+//to servo 0x1708
 static ec_pdo_entry_info_t lcec_ax2000_out[] = {
-  {0x6062, 0x00, 32}, // Cmd position         DINT
-  {0x606b, 0x00, 32}, // Cmd Velocity         DINT
-  {0x6074, 0x00, 16}, // Cmd Torq             INT
-  {0x6072, 0x00, 16}, // Cmd Torq max         INT
+  {0x6062, 0x00, 32},   // Cmd position         DINT
+  {0x606b, 0x00, 32},   // Cmd Velocity         DINT
+  {0x6074, 0x00, 16},   // Cmd Torq             INT
+  {0x6072, 0x00, 16},   // Cmd Torq max         UINT
+  {0x6060, 0x00, 8},    // Operat mode cmd      USINT
+  {0x0000, 0x00, 8},    // Gap
   {0x6040, 0x00,  16},  // Control word       UINT
-  {0x2802, 0x00,  16}  // Control latch word  UINT 
+  {0x2802, 0x00,  16}   // Control latch word  UINT 
  
 };
 
 static ec_pdo_info_t lcec_ax2000_pdos_out[] = {
-     {0x1707, 6, lcec_ax2000_out}
+     {0x1708, 8, lcec_ax2000_out}
 };
 
 static ec_pdo_info_t lcec_ax2000_pdos_in[] = {
-     {0x1b07, 7, lcec_ax2000_in}
+     {0x1b08, 8, lcec_ax2000_in}
 };
 
 
@@ -185,18 +206,22 @@ int lcec_ax2000_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *
   slave->sync_info = lcec_ax2000_syncs;
 
   //init PDO entries
+  //0x1b08
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6064, 0x00, &hal_data->fb_pos_pdo_os, NULL);
-  LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x35c9, 0x00, &hal_data->fb_pos2_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6077, 0x00, &hal_data->fb_torq_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x60f4, 0x00, &hal_data->fb_follerr_pdo_os, NULL);
+  LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6061, 0x00, &hal_data->fb_opmode_pdo_os, NULL);
+  LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x0000, 0x00, &hal_data->gap, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6041, 0x00, &hal_data->status_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x2901, 0x00, &hal_data->latch_status_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x2902, 0x00, &hal_data->fb_pos_lat_pdo_os, NULL);
-
+  //0x1708
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6062, 0x00, &hal_data->cmd_pos_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x606b, 0x00, &hal_data->cmd_vel_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6074, 0x00, &hal_data->cmd_torq_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6072, 0x00, &hal_data->max_torq_pdo_os, NULL);
+  LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6060, 0x00, &hal_data->cmd_opmode_pdo_os, NULL);
+  LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x0000, 0x00, &hal_data->ga1, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6040, 0x00, &hal_data->controlW_pdo_os, NULL);
   LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x2802, 0x00, &hal_data->lat_controlW_pdo_os, NULL);
 
@@ -258,8 +283,8 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   pos_fb    = EC_READ_S32(&pd[hal_data->fb_pos_pdo_os]);
   *(hal_data->pos_fb)= (double) pos_fb / 10000;
 
-  pos_fb2    = EC_READ_S32(&pd[hal_data->fb_pos2_pdo_os]);
-  *(hal_data->pos2_fb)= (double) pos_fb2 / 10000;
+  // pos_fb2    = EC_READ_S32(&pd[hal_data->fb_pos2_pdo_os]);
+  *(hal_data->opmode_fb)= (double) pos_fb2 / 10000;
 
   *(hal_data->error_code) = 0; //low byte
   *(hal_data->warn_code) =  8; //high byte
@@ -280,7 +305,7 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   }
 
   // read Modes of Operation
-  //opmode_in = EC_READ_S8(&pd[hal_data->mode_op_display_pdo_os]);
+  opmode_in = EC_READ_S8(&pd[hal_data->fb_opmode_pdo_os]);
 
   // read status word
   status = EC_READ_U16(&pd[hal_data->status_pdo_os]);
@@ -332,8 +357,8 @@ void lcec_ax2000_write(struct lcec_slave *slave, long period) {
   lcec_ax2000_check_scales(hal_data);
 
   //set drive OP mode
-  // opmode = OPMODE_VELOCITY;
-  // EC_WRITE_S8(&pd[hal_data->mode_op_pdo_os], (int8_t)opmode);
+  opmode = OPMODE_VELOCITY;
+  EC_WRITE_S8(&pd[hal_data->mode_op_pdo_os], (int8_t)opmode);
 
   // check for enable edge
   enable_edge = *(hal_data->enable) && !hal_data->enable_old;
