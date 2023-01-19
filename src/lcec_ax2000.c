@@ -42,9 +42,8 @@
 
 typedef struct {
   hal_float_t *pos_fb;
-  //hal_s32_t   *opmode_fb;
   hal_float_t *vel_rpm_cmd;
-
+  // status bits 
   hal_bit_t   *stat_switch_on_ready;
   hal_bit_t   *stat_switched_on;
   hal_bit_t   *stat_op_enabled;
@@ -53,13 +52,18 @@ typedef struct {
   hal_bit_t   *stat_quick_stoped;
   hal_bit_t   *stat_switch_on_disabled;
   hal_bit_t   *stat_warning;
-  hal_bit_t   *stat_remote;
+  hal_bit_t   *stat_ecat_ok;
   hal_bit_t   *stat_at_speed;
+  hal_bit_t   *stat_homed;
+  hal_bit_t   *stat_home_err;
+  hal_bit_t   *stat_limit_sw;
 
+  // cmd bits
   hal_bit_t   *quick_stop;
   hal_bit_t   *enable;
   hal_bit_t   *fault_reset;
   hal_bit_t   *halt;
+  hal_bit_t   *start_homing;
 
   hal_s32_t   *mode_op_display;
 
@@ -114,8 +118,11 @@ static const lcec_pindesc_t slave_pins[] = {
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_quick_stoped),    "%s.%s.%s.stat-quick-stoped" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_switch_on_disabled), "%s.%s.%s.stat-switch-on-disabled" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_warning),         "%s.%s.%s.stat-warning" },
-  { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_remote),          "%s.%s.%s.stat-remote" },
+  { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_ecat_ok),          "%s.%s.%s.stat-ecat-ok" },
   { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_at_speed),        "%s.%s.%s.stat-at-speed" },
+  { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_homed),           "%s.%s.%s.stat-homed" },
+  { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_home_err),        "%s.%s.%s.stat-home-err" },
+  { HAL_BIT,   HAL_OUT,   offsetof(lcec_ax2000_data_t, stat_limit_sw),        "%s.%s.%s.stat-limit-sw" },
   { HAL_FLOAT, HAL_OUT,   offsetof(lcec_ax2000_data_t, act_current),          "%s.%s.%s.act-current" },
   { HAL_U32,   HAL_OUT,   offsetof(lcec_ax2000_data_t, warn_code),            "%s.%s.%s.warn-code" },
   { HAL_U32,   HAL_OUT,   offsetof(lcec_ax2000_data_t, error_code),           "%s.%s.%s.error-code" },
@@ -124,6 +131,7 @@ static const lcec_pindesc_t slave_pins[] = {
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, enable),               "%s.%s.%s.enable" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, fault_reset),          "%s.%s.%s.fault-reset" },
   { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, halt),                 "%s.%s.%s.halt" },
+  { HAL_BIT,   HAL_IN,    offsetof(lcec_ax2000_data_t, start_homing),         "%s.%s.%s.start-homing" },
   { HAL_FLOAT, HAL_IN,    offsetof(lcec_ax2000_data_t, vel_rpm_cmd),          "%s.%s.%s.vel-rpm-cmd" },
   { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, cmd_torq),             "%s.%s.%s.cmd-torq" },
   { HAL_U32,   HAL_IN,    offsetof(lcec_ax2000_data_t, max_torq),             "%s.%s.%s.max-torq" },
@@ -299,7 +307,7 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
     *(hal_data->stat_quick_stoped)       = 0;
     *(hal_data->stat_switch_on_disabled) = 0;
     *(hal_data->stat_warning)            = 0;
-    *(hal_data->stat_remote)             = 0;
+    *(hal_data->stat_ecat_ok)             = 0;
     *(hal_data->stat_at_speed)           = 0;
     return;
   }
@@ -318,8 +326,11 @@ void lcec_ax2000_read(struct lcec_slave *slave, long period) {
   *(hal_data->stat_quick_stoped)       = (status >> 5) & 1;
   *(hal_data->stat_switch_on_disabled) = (status >> 6) & 1;
   *(hal_data->stat_warning)            = (status >> 7) & 1;
-  *(hal_data->stat_remote)             = (status >> 9) & 1;
+  *(hal_data->stat_homed)               = (status >> 9) & 1;
   *(hal_data->stat_at_speed)           = (status >> 10) & 0x01;
+  *(hal_data->stat_limit_sw)           = (status >> 11) & 1;
+  *(hal_data->stat_ecat_ok)            = (status >> 12) & 1;
+  *(hal_data->stat_home_err)           = (status >> 13) & 1;
 
    // set fault if op mode is wrong
    //if (opmode_in != OPMODE_VELOCITY) {
